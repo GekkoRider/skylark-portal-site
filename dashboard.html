@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent Portal — Skylark Learning Club</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 15c4 0 6-2 8.5-5C13 7 15 5 19 5c0 0-1 3-3.5 4.5C13.5 11 12 12 12 12s4 .5 6-1c0 0-.5 3.5-4 5-2.6 1.1-6 .8-8 1l-4-1Z' fill='none' stroke='%23336E8E' stroke-width='1.5' stroke-linejoin='round'/%3E%3Ccircle cx='17.5' cy='7' r='1' fill='%23336E8E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper:#FBF9F3; --ink:#232830; --ink-soft:#556072; --sky:#33668E; --sky-strong:#285376;
+    --hairline:#E4DECF; --surface:#FFFFFF; --surface-tint:#EDF2F5; --wheat:#E0A33E; --moss:#4C7A5A;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --paper:#141A20; --ink:#E8ECF0; --ink-soft:#9DA9B7; --sky:#79ABD6; --sky-strong:#9BC3E6;
+      --hairline:#2C3742; --surface:#1B232C; --surface-tint:#202B35; --wheat:#EDB65A; --moss:#7FAE8B; }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; line-height:1.6;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:color-mix(in srgb, var(--paper) 90%, transparent);
+    backdrop-filter:blur(10px); border-bottom:1px solid var(--hairline);
+  }
+  .header-inner{ max-width:56rem; margin-inline:auto; padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between; }
+  .brand{ display:flex; align-items:center; gap:0.5rem; font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:1.05rem; }
+  .brand svg{ width:22px; height:22px; color:var(--sky); flex:none; }
+  #signOutBtn{
+    font-family:inherit; font-size:0.85rem; font-weight:600; color:var(--ink-soft);
+    background:transparent; border:1px solid var(--hairline); border-radius:8px; padding:0.5rem 0.9rem; cursor:pointer;
+  }
+  #signOutBtn:hover{ color:var(--ink); background:var(--surface-tint); }
+  main{ max-width:56rem; margin-inline:auto; padding:2.5rem 1.5rem 5rem; }
+  h1{ font-family:"Fraunces", Georgia, serif; font-weight:600; font-size:1.8rem; margin:0 0 0.3rem; }
+  .welcome-sub{ color:var(--ink-soft); margin-bottom:2.5rem; }
+  .child-card{
+    background:var(--surface); border:1px solid var(--hairline); border-radius:16px;
+    padding:1.8rem; margin-bottom:1.6rem;
+  }
+  .child-name{ font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:1.3rem; margin-bottom:0.2rem; }
+  .child-meta{ color:var(--ink-soft); font-size:0.9rem; margin-bottom:1.4rem; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.2rem; }
+  @media (max-width:600px){ .grid2{ grid-template-columns:1fr; } }
+  .field{ background:var(--surface-tint); border-radius:10px; padding:0.9rem 1rem; }
+  .field .label{ font-size:0.72rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:0.3rem; }
+  .field .value{ font-size:0.98rem; }
+  .btn{
+    display:inline-flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.92rem;
+    background:var(--sky); color:#fff; text-decoration:none; border-radius:9px; padding:0.65rem 1.1rem;
+  }
+  .btn:hover{ background:var(--sky-strong); }
+  .section-title{ font-size:0.78rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); margin:1.4rem 0 0.6rem; }
+  .pack-row, .report-row{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:0.8rem 0; border-top:1px solid var(--hairline);
+  }
+  .pack-row .month, .report-row .month{ font-weight:600; font-size:0.92rem; }
+  .report-row .text{ color:var(--ink-soft); font-size:0.9rem; margin-top:0.2rem; }
+  .empty{ color:var(--ink-soft); font-size:0.9rem; padding:0.6rem 0; }
+  #loading, #errorState{ text-align:center; color:var(--ink-soft); padding:4rem 1rem; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 15c4 0 6-2 8.5-5C13 7 15 5 19 5c0 0-1 3-3.5 4.5C13.5 11 12 12 12 12s4 .5 6-1c0 0-.5 3.5-4 5-2.6 1.1-6 .8-8 1l-4-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="17.5" cy="7" r="1" fill="currentColor"/></svg>
+        Skylark Learning Club
+      </div>
+      <button id="signOutBtn" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading">Loading your dashboard…</div>
+    <div id="errorState" style="display:none"></div>
+    <div id="content" style="display:none">
+      <h1 id="welcomeHeading">Welcome back</h1>
+      <p class="welcome-sub">Here's what's coming up for your family.</p>
+      <div id="childrenContainer"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    // ---- Same values as index.html ----
+    const SUPABASE_URL = 'https://clsbenbapgvgmubzbgxw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsc2JlbmJhcGd2Z211YnpiZ3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNTcyNDIsImV4cCI6MjEwMzgzMzI0Mn0.ZcNy6eBKnu8S4Zgxincdm2PgUTezs4Z7NiddWm6JssM';
+    // ------------------------------------
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('errorState');
+    const contentEl = document.getElementById('content');
+
+    function monthLabel(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str ?? '';
+      return div.innerHTML;
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.replace('/index.html');
+        return;
+      }
+
+      document.getElementById('signOutBtn').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.replace('/index.html');
+      });
+
+      try {
+        const { data: family, error: familyErr } = await supabase
+          .from('families')
+          .select('id, parent_name')
+          .eq('auth_user_id', session.user.id)
+          .single();
+        if (familyErr) throw familyErr;
+
+        document.getElementById('welcomeHeading').textContent =
+          'Welcome back, ' + (family.parent_name || 'there') + '!';
+
+        const { data: children, error: childrenErr } = await supabase
+          .from('children')
+          .select('id, first_name, year_group')
+          .eq('family_id', family.id);
+        if (childrenErr) throw childrenErr;
+
+        const container = document.getElementById('childrenContainer');
+
+        if (!children || children.length === 0) {
+          container.innerHTML = '<p class="empty">No children are linked to your account yet — email hello@skylark.education if this looks wrong.</p>';
+        } else {
+          for (const child of children) {
+            const { data: enrollments } = await supabase
+              .from('enrollments')
+              .select('cohort_id, cohorts ( strand, day_of_week, session_time, tutor_name, classroom_link )')
+              .eq('child_id', child.id)
+              .eq('active', true);
+
+            const cohort = enrollments && enrollments[0] ? enrollments[0].cohorts : null;
+            const cohortId = enrollments && enrollments[0] ? enrollments[0].cohort_id : null;
+
+            let packsHtml = '<p class="empty">No packs yet.</p>';
+            if (cohortId) {
+              const { data: packs } = await supabase
+                .from('packs')
+                .select('month, pack_url')
+                .eq('cohort_id', cohortId)
+                .order('month', { ascending: false })
+                .limit(3);
+              if (packs && packs.length) {
+                packsHtml = packs.map(p => `
+                  <div class="pack-row">
+                    <span class="month">${escapeHtml(monthLabel(p.month))}</span>
+                    <a class="btn" href="${escapeHtml(p.pack_url)}" target="_blank" rel="noopener">Download pack</a>
+                  </div>`).join('');
+              }
+            }
+
+            const { data: reports } = await supabase
+              .from('progress_reports')
+              .select('month, report_text')
+              .eq('child_id', child.id)
+              .order('month', { ascending: false })
+              .limit(3);
+
+            let reportsHtml = '<p class="empty">No progress reports yet.</p>';
+            if (reports && reports.length) {
+              reportsHtml = reports.map(r => `
+                <div class="report-row" style="display:block">
+                  <span class="month">${escapeHtml(monthLabel(r.month))}</span>
+                  <div class="text">${escapeHtml(r.report_text)}</div>
+                </div>`).join('');
+            }
+
+            const cohortBlock = cohort ? `
+              <div class="grid2">
+                <div class="field"><div class="label">Strand</div><div class="value">${escapeHtml(cohort.strand)}</div></div>
+                <div class="field"><div class="label">Weekly session</div><div class="value">${escapeHtml(cohort.day_of_week)}, ${escapeHtml(cohort.session_time)}</div></div>
+                <div class="field"><div class="label">Tutor</div><div class="value">${escapeHtml(cohort.tutor_name)}</div></div>
+                <div class="field"><div class="label">Year group</div><div class="value">${escapeHtml(child.year_group)}</div></div>
+              </div>
+              <a class="btn" href="${escapeHtml(cohort.classroom_link)}" target="_blank" rel="noopener">Join this week's session</a>
+            ` : '<p class="empty">Cohort details are on their way — we\'ll email you within one working day.</p>';
+
+            const card = document.createElement('div');
+            card.className = 'child-card';
+            card.innerHTML = `
+              <div class="child-name">${escapeHtml(child.first_name)}</div>
+              <div class="child-meta">Year ${escapeHtml(child.year_group)}</div>
+              ${cohortBlock}
+              <div class="section-title">Digital packs</div>
+              ${packsHtml}
+              <div class="section-title">Progress reports</div>
+              ${reportsHtml}
+            `;
+            container.appendChild(card);
+          }
+        }
+
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+      } catch (err) {
+        console.error(err);
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = "We couldn't load your dashboard. Please refresh, or email hello@skylark.education if this keeps happening.";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
