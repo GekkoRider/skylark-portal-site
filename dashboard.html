@@ -155,7 +155,11 @@
             const cohort = enrollments && enrollments[0] ? enrollments[0].cohorts : null;
             const cohortId = enrollments && enrollments[0] ? enrollments[0].cohort_id : null;
 
-            let packsHtml = '<p class="empty">No packs yet.</p>';
+            let packsHtml = `
+              <div class="pack-row">
+                <span class="month">Getting Started</span>
+                <a class="btn" href="/welcome-pack" target="_blank" rel="noopener">View welcome pack</a>
+              </div>`;
             if (cohortId) {
               const { data: packs } = await supabase
                 .from('packs')
@@ -164,7 +168,7 @@
                 .order('month', { ascending: false })
                 .limit(3);
               if (packs && packs.length) {
-                packsHtml = packs.map(p => `
+                packsHtml += packs.map(p => `
                   <div class="pack-row">
                     <span class="month">${escapeHtml(monthLabel(p.month))}</span>
                     <a class="btn" href="${escapeHtml(p.pack_url)}" target="_blank" rel="noopener">Download pack</a>
