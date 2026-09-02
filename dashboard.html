@@ -54,6 +54,10 @@
     background:var(--sky); color:#fff; text-decoration:none; border-radius:9px; padding:0.65rem 1.1rem;
   }
   .btn:hover{ background:var(--sky-strong); }
+  .add-subject{ margin-top:1rem; padding-top:0.8rem; border-top:1px dashed var(--hairline); }
+  .add-subject label{ display:block; font-size:0.78rem; color:var(--ink-soft); margin-bottom:0.4rem; }
+  .add-subject-row{ display:flex; gap:0.5rem; flex-wrap:wrap; }
+  .add-subject-row select{ font-family:inherit; font-size:0.85rem; padding:0.45rem 0.55rem; border-radius:8px; border:1px solid var(--hairline); background:var(--surface-tint); color:var(--ink); flex:1; min-width:8rem; }
   .section-title{ font-size:0.78rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); margin:1.4rem 0 0.6rem; }
   .pack-row, .report-row{
     display:flex; align-items:center; justify-content:space-between; gap:1rem;
@@ -211,17 +215,49 @@
                 }).join("<div style=\"height:0.8rem\"></div>")
               : "<p class=\"empty\">Cohort details are on their way \u2014 we will email you within one working day.</p>";
 
+            const STRANDS = ["English", "Maths", "Science", "Creative Writing", "11+ Preparation"];
+            function strandSlug(s) {
+              return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+            }
+            const enrolledStrands = activeEnrollments.map(e => e.cohorts && e.cohorts.strand).filter(Boolean);
+            const availableStrands = STRANDS.filter(s => !enrolledStrands.includes(s));
+            const addSubjectHtml = availableStrands.length ? `
+              <div class="add-subject">
+                <label for="addSubject-${child.id}">Add another subject</label>
+                <div class="add-subject-row">
+                  <select id="addSubject-${child.id}" class="addSubjectSelect">
+                    <option value="">Choose a subject\u2026</option>
+                    ${availableStrands.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("")}
+                  </select>
+                  <button class="btn addSubjectBtn" type="button">Continue to payment \u2014 &pound;99/month</button>
+                </div>
+              </div>` : "";
+
             const card = document.createElement("div");
             card.className = "child-card";
             card.innerHTML = `
               <div class="child-name">${escapeHtml(child.first_name)}</div>
               <div class="child-meta">Year ${escapeHtml(child.year_group)}</div>
               ${cohortBlock}
+              ${addSubjectHtml}
               <div class="section-title">Digital packs</div>
               ${packsHtml}
               <div class="section-title">Progress reports</div>
               ${reportsHtml}
             `;
+            const addBtn = card.querySelector(".addSubjectBtn");
+            if (addBtn) {
+              addBtn.addEventListener("click", () => {
+                const select = card.querySelector(".addSubjectSelect");
+                const strand = select.value;
+                if (!strand) { select.focus(); return; }
+                const ref = "child:" + child.id + ":" + strandSlug(strand);
+                const url = new URL("https://buy.stripe.com/dRm4gs9Lm3hF5iadp77kc00");
+                url.searchParams.set("client_reference_id", ref);
+                if (session.user.email) { url.searchParams.set("prefilled_email", session.user.email); }
+                window.open(url.toString(), "_blank");
+              });
+            }
             container.appendChild(card);
           }
         }
