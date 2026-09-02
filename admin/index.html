@@ -307,34 +307,59 @@
     }).join('');
   }
 
+  function enrollmentsFor(childId) {
+    return ENROLLMENTS.filter(e => e.child_id === childId);
+  }
+
   function renderFamilies() {
-    const list = document.getElementById('familiesList');
+    const list = document.getElementById("familiesList");
     if (!FAMILIES.length) {
-      list.innerHTML = '<p class="empty">No families yet.</p>';
+      list.innerHTML = "<p class=\"empty\">No families yet.</p>";
       return;
     }
     list.innerHTML = FAMILIES.map(f => {
       const kids = CHILDREN.filter(c => c.family_id === f.id);
       const kidsHtml = kids.length
         ? kids.map(child => {
-            const e = enrollmentFor(child.id);
-            const cohort = e ? COHORTS.find(c => c.id === e.cohort_id) : null;
-            const status = cohort
-              ? `<span class="pill ok">${escapeHtml(cohortLabel(cohort))}</span>`
-              : `<span class="pill warn">Unassigned</span>`;
-            return `<div class="row" style="margin-top:0.3rem;"><span>${escapeHtml(child.first_name)} <span class="meta">Year ${escapeHtml(child.year_group)}</span></span>${status}</div>`;
-          }).join('')
-        : '<span class="empty">No children on file</span>';
-      return `
-        <div class="card">
-          <div class="name">${escapeHtml(f.parent_name)}</div>
-          <div class="meta">${escapeHtml(f.email)}</div>
-          <div style="margin-top:0.6rem;">${kidsHtml}</div>
-        </div>`;
-    }).join('');
-  }
+            const childEnrollments = enrollmentsFor(child.id);
+            const enrolledCohortIds = childEnrollments.map(e => e.cohort_id);
+            const pills = childEnrollments.length
+              ? childEnrollments.map(e => {
+                  const cohort = COHORTS.find(c => c.id === e.cohort_id);
+                  return cohort ? "<span class=\"pill ok\">" + escapeHtml(cohortLabel(cohort)) + "</span>" : "";
+                }).join(" ")
+              : "<span class=\"pill warn\">Unassigned</span>";
+            const availableCohorts = COHORTS.filter(c => !enrolledCohortIds.includes(c.id));
+            const addOptions = availableCohorts.map(c => "<option value=\"" + c.id + "\">" + escapeHtml(cohortLabel(c)) + "</option>").join("");
+            const addControl = availableCohorts.length
+              ? "<select class=\"addCohortSelect small\" data-child=\"" + child.id + "\"><option value=\"\">+ Add cohort\u2026</option>" + addOptions + "</select> <button class=\"small addCohortBtn\" data-child=\"" + child.id + "\">Add</button>"
+              : "";
+            return "<div class=\"row\" style=\"margin-top:0.3rem; align-items:flex-start;\"><span>" + escapeHtml(child.first_name) + " <span class=\"meta\">Year " + escapeHtml(child.year_group) + "</span></span><span style=\"text-align:right\">" + pills + "<br>" + addControl + "</span></div>";
+          }).join("")
+        : "<span class=\"empty\">No children on file</span>";
+      return "<div class=\"card\"><div class=\"name\">" + escapeHtml(f.parent_name) + "</div><div class=\"meta\">" + escapeHtml(f.email) + "</div><div style=\"margin-top:0.6rem;\">" + kidsHtml + "</div></div>";
+    }).join("");
 
-  document.getElementById('newCohortForm').addEventListener('submit', async (e) => {
+    list.querySelectorAll(".addCohortBtn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const childId = btn.getAttribute("data-child");
+        const select = list.querySelector('.addCohortSelect[data-child="' + childId + '"]');
+        const cohortId = select.value;
+        if (!cohortId) { select.focus(); return; }
+        btn.disabled = true;
+        btn.textContent = "Adding\u2026";
+        const { error } = await supabase.from("enrollments").insert({ child_id: childId, cohort_id: cohortId, active: true });
+        if (error) {
+          btn.disabled = false;
+          btn.textContent = "Add";
+          alert("Could not add cohort: " + error.message);
+          return;
+        }
+        await loadDashboard();
+      });
+    });
+  }
+document.getElementById('newCohortForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     const fd = new FormData(form);
