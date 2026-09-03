@@ -13,10 +13,11 @@
   :root{
     --paper:#FBF9F3; --ink:#232830; --ink-soft:#556072; --sky:#33668E; --sky-strong:#285376;
     --hairline:#E4DECF; --surface:#FFFFFF; --surface-tint:#EDF2F5; --wheat:#E0A33E; --moss:#4C7A5A;
+    --danger:#B23B3B;
   }
   @media (prefers-color-scheme: dark){
     :root{ --paper:#141A20; --ink:#E8ECF0; --ink-soft:#9DA9B7; --sky:#79ABD6; --sky-strong:#9BC3E6;
-      --hairline:#2C3742; --surface:#1B232C; --surface-tint:#202B35; --wheat:#EDB65A; --moss:#7FAE8B; }
+      --hairline:#2C3742; --surface:#1B232C; --surface-tint:#202B35; --wheat:#EDB65A; --moss:#7FAE8B; --danger:#E08080; }
   }
   *{box-sizing:border-box;}
   body{
@@ -67,6 +68,36 @@
   .report-row .text{ color:var(--ink-soft); font-size:0.9rem; margin-top:0.2rem; }
   .empty{ color:var(--ink-soft); font-size:0.9rem; padding:0.6rem 0; }
   #loading, #errorState{ text-align:center; color:var(--ink-soft); padding:4rem 1rem; }
+
+  .consent-row{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+    padding:1rem 0; border-top:1px solid var(--hairline);
+  }
+  .consent-main{ flex:1; min-width:0; }
+  .toggle{ position:relative; display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; font-size:0.95rem; }
+  .toggle input{ position:absolute; opacity:0; width:1px; height:1px; }
+  .toggle-track{
+    flex:none; width:2.6rem; height:1.5rem; border-radius:99px; background:var(--hairline);
+    position:relative; transition:background 0.15s ease;
+  }
+  .toggle-track::after{
+    content:""; position:absolute; top:2px; left:2px; width:1.1rem; height:1.1rem; border-radius:50%;
+    background:var(--surface); box-shadow:0 1px 2px rgba(0,0,0,0.25); transition:transform 0.15s ease;
+  }
+  .toggle input:checked + .toggle-track{ background:var(--sky); }
+  .toggle input:checked + .toggle-track::after{ transform:translateX(1.1rem); }
+  .toggle input:focus-visible + .toggle-track{ outline:2px solid var(--sky); outline-offset:2px; }
+  .toggle input:disabled + .toggle-track{ opacity:0.5; }
+  .consent-note{ color:var(--ink-soft); font-size:0.85rem; margin:0.35rem 0 0; }
+  .consent-msg{ font-size:0.82rem; margin:0.4rem 0 0; min-height:1.1em; }
+  .consent-msg.ok{ color:var(--moss); }
+  .consent-msg.error{ color:var(--danger); }
+  .consent-status{ flex:none; font-size:0.82rem; font-weight:600; color:var(--ink-soft); text-align:right; white-space:nowrap; padding-top:0.2rem; }
+  .consents-load-error{ color:var(--danger); font-size:0.9rem; padding:0.6rem 0; }
+  @media (max-width:600px){
+    .consent-row{ flex-direction:column; gap:0.4rem; }
+    .consent-status{ text-align:left; }
+  }
 </style>
 </head>
 <body>
@@ -113,6 +144,93 @@
       const div = document.createElement('div');
       div.textContent = str ?? '';
       return div.innerHTML;
+    }
+
+    function dayLabel(dateStr) {
+      return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // Consent toggles shown in each child card. The child_consents table is
+    // append-only — a flip is a new INSERT, never an update — and both consents
+    // start off until the parent actively opts in (Membership Agreement 10.3/10.4).
+    const CONSENT_TYPES = [
+      {
+        type: 'session_recording',
+        label: 'Allow session recording',
+        note: 'Sessions are recorded only for teaching quality and safeguarding. Recordings are never used for marketing.',
+      },
+      {
+        type: 'marketing_use',
+        label: 'Allow use in marketing',
+        note: "Covers photos, video clips, testimonials, or your child's work in Skylark's marketing. You can withdraw this at any time, with no effect on your child's place in a cohort.",
+      },
+    ];
+
+    function consentStatusText(granted, dateStr) {
+      if (granted) return dateStr ? 'On since ' + dayLabel(dateStr) : 'On';
+      return dateStr ? 'Off since ' + dayLabel(dateStr) : 'Off';
+    }
+
+    function consentsSectionHtml(childId, currentByType, loadFailed) {
+      if (loadFailed) {
+        return '<div class="section-title">Consent &amp; permissions</div>' +
+          '<p class="consents-load-error">We couldn’t load these settings just now — please refresh to try again.</p>';
+      }
+      const rows = CONSENT_TYPES.map(c => {
+        const cur = currentByType[c.type];
+        const granted = !!(cur && cur.granted);
+        const noteId = 'consentNote-' + c.type + '-' + childId;
+        return `
+          <div class="consent-row" data-type="${c.type}">
+            <div class="consent-main">
+              <label class="toggle">
+                <input type="checkbox" class="consentToggle" data-type="${c.type}" aria-describedby="${noteId}"${granted ? ' checked' : ''}>
+                <span class="toggle-track" aria-hidden="true"></span>
+                <span>${escapeHtml(c.label)}</span>
+              </label>
+              <p class="consent-note" id="${noteId}">${escapeHtml(c.note)}</p>
+              <p class="consent-msg" role="status" aria-live="polite"></p>
+            </div>
+            <div class="consent-status">${escapeHtml(consentStatusText(granted, cur && cur.created_at))}</div>
+          </div>`;
+      }).join('');
+      return '<div class="section-title">Consent &amp; permissions</div>' +
+        `<div class="consents" data-child="${childId}">${rows}</div>`;
+    }
+
+    async function handleConsentChange(childId, userId, input) {
+      const type = input.dataset.type;
+      const row = input.closest('.consent-row');
+      const statusEl = row.querySelector('.consent-status');
+      const msgEl = row.querySelector('.consent-msg');
+      const desired = input.checked;
+
+      input.disabled = true;
+      msgEl.className = 'consent-msg';
+      msgEl.textContent = 'Saving…';
+
+      const { data, error } = await supabase
+        .from('child_consents')
+        .insert({ child_id: childId, consent_type: type, granted: desired, method: 'portal', changed_by: userId })
+        .select('granted, created_at')
+        .single();
+
+      input.disabled = false;
+
+      if (error || !data) {
+        input.checked = !desired; // the write didn't land — don't let the toggle lie
+        msgEl.className = 'consent-msg error';
+        msgEl.textContent = "That didn't save — please try again.";
+        console.error('consent insert failed', error);
+        return;
+      }
+
+      statusEl.textContent = consentStatusText(data.granted, data.created_at);
+      msgEl.className = 'consent-msg ok';
+      msgEl.textContent = desired ? 'Saved — this is now allowed.' : 'Saved — this is now turned off.';
+      setTimeout(() => {
+        if (msgEl.textContent.startsWith('Saved')) { msgEl.textContent = ''; msgEl.className = 'consent-msg'; }
+      }, 4000);
     }
 
     async function init() {
@@ -199,6 +317,19 @@
                 </div>`).join("");
             }
 
+            const consentCurrent = {};
+            let consentLoadFailed = false;
+            const { data: consentRows, error: consentErr } = await supabase
+              .from("child_consents_current")
+              .select("consent_type, granted, created_at")
+              .eq("child_id", child.id);
+            if (consentErr) {
+              consentLoadFailed = true;
+              console.error("consent load failed", consentErr);
+            } else {
+              for (const r of (consentRows || [])) consentCurrent[r.consent_type] = r;
+            }
+
             const cohortBlock = activeEnrollments.length
               ? activeEnrollments.map(e => {
                   const cohort = e.cohorts;
@@ -244,7 +375,13 @@
               ${packsHtml}
               <div class="section-title">Progress reports</div>
               ${reportsHtml}
+              ${consentsSectionHtml(child.id, consentCurrent, consentLoadFailed)}
             `;
+
+            card.querySelectorAll(".consentToggle").forEach(input => {
+              input.addEventListener("change", () => handleConsentChange(child.id, session.user.id, input));
+            });
+
             const addBtn = card.querySelector(".addSubjectBtn");
             if (addBtn) {
               addBtn.addEventListener("click", () => {
