@@ -515,7 +515,7 @@
     const existing = PACKS.find(p => p.cohort_id === cohort.id && sameMonth(p.month));
 
     const rowEl = el('div', { className: 'pack-row' });
-    const input = el('input', { type: 'url', placeholder: 'Paste the pack link (Google Drive, etc.)$', value: existing ? existing.pack_url : '' });
+    const input = el('input', { type: 'url', placeholder: 'Paste the pack link (Google Drive, etc.)', value: existing ? existing.pack_url : '' });
     const btn = el('button', { className: 'primary small', type: 'button', textContent: 'Save' });
     const stat = el('span', { className: 'save-status', 'aria-live': 'polite' });
     rowEl.append(input, btn, stat);
