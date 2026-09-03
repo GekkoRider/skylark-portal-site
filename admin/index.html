@@ -100,6 +100,9 @@
   <h2>Needs a cohort <span id="needsCount" class="pill warn"></span></h2>
   <div id="needsList"></div>
 
+  <h2>Flagged for follow-up <span id="flagCount" class="pill warn"></span></h2>
+  <div id="flagsList"></div>
+
   <h2>All cohorts</h2>
   <div id="cohortsList"></div>
 
@@ -119,6 +122,9 @@
     </label>
     <label>Tutor
       <input name="tutor_name" required placeholder="TBC or name">
+    </label>
+    <label>Tutor email (their login)
+      <input name="tutor_email" type="email" placeholder="tutor@skylark.education">
     </label>
     <label>Classroom link
       <input name="classroom_link" required placeholder="https://...">
@@ -199,23 +205,70 @@
   let CHILDREN = [];
   let FAMILIES = [];
   let ENROLLMENTS = [];
+  let FLAGS = [];
 
   async function loadDashboard() {
-    const [familiesRes, childrenRes, cohortsRes, enrollmentsRes] = await Promise.all([
+    const [familiesRes, childrenRes, cohortsRes, enrollmentsRes, flagsRes] = await Promise.all([
       supabase.from('families').select('id,parent_name,email').order('parent_name'),
       supabase.from('children').select('id,family_id,first_name,year_group'),
-      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,capacity').order('year_range'),
+      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,tutor_email,capacity').order('year_range'),
       supabase.from('enrollments').select('id,child_id,cohort_id,active').eq('active', true),
+      supabase.from('tutor_flags')
+        .select('id,note,created_at,child_id,tutor_email,resolved,children(first_name)')
+        .eq('resolved', false)
+        .order('created_at', { ascending: false }),
     ]);
 
     FAMILIES = familiesRes.data || [];
     CHILDREN = childrenRes.data || [];
     COHORTS = cohortsRes.data || [];
     ENROLLMENTS = enrollmentsRes.data || [];
+    FLAGS = flagsRes.data || [];
 
     renderNeedsCohort();
+    renderFlags();
     renderCohorts();
     renderFamilies();
+  }
+
+  function renderFlags() {
+    const list = document.getElementById('flagsList');
+    document.getElementById('flagCount').textContent = FLAGS.length;
+    if (!FLAGS.length) {
+      list.innerHTML = '<p class="empty">Nothing flagged right now.</p>';
+      return;
+    }
+    list.innerHTML = FLAGS.map(f => {
+      const childName = f.children ? escapeHtml(f.children.first_name) : 'Unknown child';
+      const when = new Date(f.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return `
+        <div class="card" data-flag="${f.id}">
+          <div class="row" style="align-items:flex-start;">
+            <div>
+              <div class="name">${childName} <span class="meta">flagged ${when} by ${escapeHtml(f.tutor_email || 'a tutor')}</span></div>
+              <div class="meta" style="margin-top:0.3rem; color:var(--ink);">${escapeHtml(f.note)}</div>
+            </div>
+            <button class="small resolveFlagBtn">Mark resolved</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.resolveFlagBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const cardEl = btn.closest('[data-flag]');
+        const flagId = cardEl.getAttribute('data-flag');
+        btn.disabled = true;
+        btn.textContent = 'Resolving…';
+        const { error } = await supabase.from('tutor_flags').update({ resolved: true }).eq('id', flagId);
+        if (error) {
+          btn.disabled = false;
+          btn.textContent = 'Mark resolved';
+          alert('Could not resolve: ' + error.message);
+          return;
+        }
+        await loadDashboard();
+      });
+    });
   }
 
   function familyFor(child) {
@@ -294,18 +347,61 @@
       const rosterNames = roster.length
         ? roster.map(ch => escapeHtml(ch.first_name)).join(', ')
         : '<span class="empty">No one enrolled yet</span>';
+      const tutorEmailLabel = c.tutor_email
+        ? escapeHtml(c.tutor_email)
+        : '<span class="pill warn">no login email set</span>';
       return `
-        <div class="card">
+        <div class="card" data-cohort="${c.id}">
           <div class="cohort-header">
             <div>
               <span class="name">${escapeHtml(c.strand)}</span>
-              <span class="meta">${escapeHtml(c.year_range || 'Any year')} \u00b7 ${escapeHtml(c.day_of_week)} ${escapeHtml(c.session_time)} \u00b7 ${escapeHtml(c.tutor_name)}</span>
+              <span class="meta">${escapeHtml(c.year_range || 'Any year')} \u00b7 ${escapeHtml(c.day_of_week)} ${escapeHtml(c.session_time)}</span>
             </div>
             <span class="pill ${full ? 'warn' : 'ok'}">${roster.length} / ${capacity}</span>
           </div>
           <div class="roster">${rosterNames}</div>
+          <div class="row" style="margin-top:0.6rem;">
+            <span class="meta">Tutor: <span style="color:var(--ink)">${escapeHtml(c.tutor_name || 'TBC')}</span> \u00b7 ${tutorEmailLabel}</span>
+            <button class="small editTutorBtn">Edit tutor</button>
+          </div>
+          <form class="inline tutorEditForm" style="margin-top:0.6rem; display:none;">
+            <label>Tutor name
+              <input name="tutor_name" value="${escapeHtml(c.tutor_name || '')}" placeholder="TBC or name">
+            </label>
+            <label>Tutor email (their login)
+              <input name="tutor_email" type="email" value="${escapeHtml(c.tutor_email || '')}" placeholder="tutor@skylark.education">
+            </label>
+            <button type="submit" class="primary small">Save</button>
+            <button type="button" class="small cancelTutorBtn">Cancel</button>
+          </form>
         </div>`;
     }).join('');
+
+    list.querySelectorAll('.editTutorBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const form = btn.closest('[data-cohort]').querySelector('.tutorEditForm');
+        form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+      });
+    });
+    list.querySelectorAll('.cancelTutorBtn').forEach(btn => {
+      btn.addEventListener('click', () => { btn.closest('.tutorEditForm').style.display = 'none'; });
+    });
+    list.querySelectorAll('.tutorEditForm').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cohortId = form.closest('[data-cohort]').getAttribute('data-cohort');
+        const fd = new FormData(form);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        const { error } = await supabase.from('cohorts').update({
+          tutor_name: (fd.get('tutor_name') || '').trim() || null,
+          tutor_email: (fd.get('tutor_email') || '').trim() || null,
+        }).eq('id', cohortId);
+        submitBtn.disabled = false;
+        if (error) { alert('Could not update tutor: ' + error.message); return; }
+        await loadDashboard();
+      });
+    });
   }
 
   function enrollmentsFor(childId) {
@@ -370,6 +466,7 @@ document.getElementById('newCohortForm').addEventListener('submit', async (e) =>
       day_of_week: fd.get('day_of_week'),
       session_time: fd.get('session_time'),
       tutor_name: fd.get('tutor_name'),
+      tutor_email: (fd.get('tutor_email') || '').trim() || null,
       classroom_link: fd.get('classroom_link'),
       capacity: Number(fd.get('capacity')) || 4,
     };
