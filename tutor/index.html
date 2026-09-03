@@ -273,7 +273,7 @@
     // RLS scopes every one of these to the signed-in tutor's own cohorts /
     // students, so we can select broadly and filter in memory.
     const [cohortsRes, enrollRes, childrenRes, attRes, notesRes, packsRes, meRes] = await Promise.all([
-      supabase.from('cohorts').select('id,strand,year_range,day_of_week,ssession_time,tutor_name,classroom_link,capacity'),
+      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,classroom_link,capacity'),
       supabase.from('enrollments').select('id,child_id,cohort_id,active').eq('active', true),
       supabase.from('children').select('id,first_name,year_group'),
       supabase.from('attendance').select('id,child_id,cohort_id,session_date,status').eq('session_date', TODAY),
