@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutor — Skylark Learning Club</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 15c4 0 6-2 8.5-5C13 7 15 5 19 5c0 0-1 3-3.5 4.5C13.5 11 12 12 12 12s4 .5 6-1c0 0-.5 3.5-4 5-2.6 1.1-6 .8-8 1l-4-1Z' fill='none' stroke='%23336E8E' stroke-width='1.5' stroke-linejoin='round'/%3E%3Ccircle cx='17.5' cy='7' r='1' fill='%23336E8E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper:#FBF9F3; --ink:#232830; --ink-soft:#556072; --sky:#33668E; --sky-strong:#285376;
+    --hairline:#E4DECF; --surface:#FFFFFF; --surface-tint:#EDF2F5; --moss:#4C7A5A; --wheat:#B87E22;
+    --danger:#B23B3B;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --paper:#141A20; --ink:#E8ECF0; --ink-soft:#9DA9B7; --sky:#79ABD6; --sky-strong:#9BC3E6;
+      --hairline:#2C3742; --surface:#1B232C; --surface-tint:#202B35; --moss:#7FAE8B; --wheat:#E0B36A; --danger:#E08080; }
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; line-height:1.5;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:1rem 1.5rem; border-bottom:1px solid var(--hairline);
+  }
+  .brand{ display:flex; align-items:center; gap:0.5rem; font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:1.15rem; }
+  .brand svg{ width:22px; height:22px; color:var(--sky); }
+  button, .btn{
+    font-family:inherit; font-size:0.9rem; font-weight:600; border-radius:8px; border:1px solid var(--hairline);
+    background:var(--surface); color:var(--ink); padding:0.5rem 0.9rem; cursor:pointer;
+  }
+  button.primary{ background:var(--sky); color:#fff; border-color:var(--sky); }
+  button.primary:hover{ background:var(--sky-strong); border-color:var(--sky-strong); }
+  button.small{ padding:0.35rem 0.7rem; font-size:0.8rem; }
+  button:disabled{ opacity:0.5; cursor:not-allowed; }
+  a.btn{ display:inline-flex; align-items:center; gap:0.45rem; text-decoration:none; }
+  main{ max-width:60rem; margin:0 auto; padding:2rem 1.5rem 5rem; }
+  h1{ font-family:"Fraunces",Georgia,serif; font-size:1.7rem; margin:0 0 0.4rem; }
+  h2{ font-family:"Fraunces",Georgia,serif; font-size:1.2rem; margin:2.5rem 0 0.2rem; }
+  .sub{ color:var(--ink-soft); margin:0 0 1.5rem; }
+  .card{ background:var(--surface); border:1px solid var(--hairline); border-radius:12px; padding:1.2rem; margin-bottom:0.8rem; }
+  .cohort-card{ padding:1.4rem; margin-bottom:1.4rem; }
+  .row{ display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .name{ font-weight:600; }
+  .meta{ color:var(--ink-soft); font-size:0.85rem; }
+  .pill{
+    display:inline-block; font-size:0.75rem; font-weight:600; padding:0.15rem 0.55rem; border-radius:99px;
+    background:var(--surface-tint); color:var(--ink-soft);
+  }
+  #gate{ max-width:26rem; margin:5rem auto; text-align:center; }
+  #gate input{
+    width:100%; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--hairline);
+    background:var(--surface-tint); color:var(--ink); font-family:inherit; margin:0.8rem 0;
+  }
+  #status{ color:var(--ink-soft); font-size:0.85rem; margin-top:0.6rem; min-height:1.2em; }
+  #status.error{ color:var(--danger); }
+  .empty{ color:var(--ink-soft); font-size:0.9rem; }
+  .hidden{ display:none; }
+
+  /* How this works */
+  .tips{
+    background:var(--surface); border:1px solid var(--hairline); border-left:3px solid var(--sky);
+    border-radius:10px; padding:1.1rem 1.3rem; margin:0 0 2rem;
+  }
+  .tips h3{ font-family:"Fraunces",Georgia,serif; font-size:1rem; margin:0 0 0.5rem; color:var(--sky-strong); }
+  .tips ul{ margin:0; padding-left:1.1rem; }
+  .tips li{ margin-bottom:0.3rem; font-size:0.92rem; }
+  .tips li:last-child{ margin-bottom:0; }
+
+  /* Cohort header */
+  .cohort-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:0.3rem; }
+  .cohort-title{ font-family:"Fraunces",Georgia,serif; font-size:1.15rem; font-weight:600; }
+  .cohort-when{ color:var(--ink-soft); font-size:0.9rem; margin-top:0.1rem; }
+
+  /* Roster */
+  .roster{ margin-top:1rem; }
+  .student{
+    border-top:1px solid var(--hairline); padding:1.1rem 0;
+  }
+  .student:first-child{ border-top:0; padding-top:0.4rem; }
+  .student-head{ display:flex; align-items:center; justify-content:space-between; gap:0.8rem; flex-wrap:wrap; }
+  .att-group{ display:flex; gap:0.4rem; flex-wrap:wrap; }
+  .att-btn{ border:1px solid var(--hairline); background:var(--surface-tint); color:var(--ink-soft); }
+  .att-btn:hover{ color:var(--ink); }
+  .att-btn.sel-present{ background:var(--moss); color:#fff; border-color:var(--moss); }
+  .att-btn.sel-late{ background:var(--wheat); color:#fff; border-color:var(--wheat); }
+  .att-btn.sel-absent{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .att-feedback{ font-size:0.8rem; color:var(--ink-soft); min-height:1em; margin-top:0.35rem; }
+  .att-feedback.ok{ color:var(--moss); }
+  .att-feedback.error{ color:var(--danger); }
+
+  /* Notes */
+  .note-label{ display:block; font-size:0.78rem; color:var(--ink-soft); font-weight:600; margin:0.9rem 0 0.35rem; }
+  textarea{
+    width:100%; font-family:inherit; font-size:0.9rem; color:var(--ink); line-height:1.5;
+    background:var(--surface-tint); border:1px solid var(--hairline); border-radius:8px; padding:0.6rem 0.7rem;
+    resize:vertical; min-height:4.5rem;
+  }
+  textarea:focus{ outline:2px solid var(--sky); outline-offset:1px; border-color:transparent; }
+  .save-row{ display:flex; align-items:center; gap:0.7rem; margin-top:0.45rem; flex-wrap:wrap; }
+  .save-status{ font-size:0.8rem; color:var(--ink-soft); min-height:1em; }
+  .save-status.ok{ color:var(--moss); }
+  .save-status.error{ color:var(--danger); }
+  .save-status.dirty{ color:var(--wheat); }
+
+  /* Flag */
+  .flag-toggle{
+    margin-top:0.9rem; border:0; background:transparent; color:var(--sky); padding:0;
+    font-size:0.85rem; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px;
+  }
+  .flag-toggle:hover{ color:var(--sky-strong); }
+  .flag-panel{ margin-top:0.7rem; padding:0.9rem; background:var(--surface-tint); border-radius:8px; }
+  .flag-panel p{ margin:0 0 0.5rem; font-size:0.82rem; color:var(--ink-soft); }
+
+  /* Pack */
+  .pack-block{ margin-top:1.3rem; padding-top:1.1rem; border-top:1px dashed var(--hairline); }
+  .pack-label{ font-size:0.78rem; font-weight:600; color:var(--ink-soft); margin-bottom:0.4rem; }
+  .pack-row{ display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; }
+  .pack-row input{
+    flex:1; min-width:14rem; font-family:inherit; font-size:0.85rem; padding:0.5rem 0.6rem;
+    border-radius:6px; border:1px solid var(--hairline); background:var(--surface-tint); color:var(--ink);
+  }
+  .pack-row input:focus{ outline:2px solid var(--sky); outline-offset:1px; border-color:transparent; }
+  .pack-current{ font-size:0.8rem; margin-top:0.4rem; }
+  .pack-current a{ color:var(--sky); }
+
+  #loading{ text-align:center; color:var(--ink-soft); padding:4rem 1rem; }
+
+  @media (max-width:560px){
+    .student-head{ align-items:flex-start; }
+    .att-group{ width:100%; }
+    .att-btn{ flex:1; text-align:center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 15c4 0 6-2 8.5-5C13 7 15 5 19 5c0 0-1 3-3.5 4.5C13.5 11 12 12 12 12s4 .5 6-1c0 0-.5 3.5-4 5-2.6 1.1-6 .8-8 1l-4-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="17.5" cy="7" r="1" fill="currentColor"/></svg>
+    Skylark Tutor
+  </div>
+  <button id="signOutBtn" class="hidden">Sign out</button>
+</header>
+
+<div id="gate">
+  <h1>Tutor sign-in</h1>
+  <p class="sub">Enter your Skylark tutor email — we'll send a secure sign-in link, no password needed.</p>
+  <input id="emailInput" type="email" placeholder="you@skylark.education" autocomplete="email">
+  <button id="sendLinkBtn" class="primary" style="width:100%">Send me a sign-in link</button>
+  <p id="status"></p>
+</div>
+
+<main id="app" class="hidden">
+  <h1 id="greeting">Your teaching space</h1>
+  <p class="sub" id="greetingSub">Everything for your groups in one place — take the register, jot a note, flag anything that needs a second pair of eyes.</p>
+
+  <div class="tips">
+    <h3>How this works</h3>
+    <ul>
+      <li>Mark attendance at the start of each session — one tap per child, and you can re-tap any time to correct it.</li>
+      <li>Progress notes are for the whole month. Save as you go; you can keep editing right up until the month ends.</li>
+      <li>Spotted something, big or small? Flag it and a staff member will follow up — it goes straight to the team, not the parent.</li>
+      <li>Add this month's digital pack link once per group and every family in it sees it on their dashboard.</li>
+    </ul>
+  </div>
+
+  <div id="cohortsList"></div>
+</main>
+
+<div id="loading" class="hidden">Loading your groups…</div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+  const SUPABASE_URL = 'https://clsbenbapgvgmubzbgxw.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsc2JlbmJhcGd2Z211YnpiZ3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNTcyNDIsImV4cCI6MjEwMzgzMzI0Mn0.ZcNy6eBKnu8S4Zgxincdm2PgUTezs4Z7NiddWm6JssM';
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const gate = document.getElementById('gate');
+  const app = document.getElementById('app');
+  const loadingEl = document.getElementById('loading');
+  const statusEl = document.getElementById('status');
+  const signOutBtn = document.getElementById('signOutBtn');
+  const cohortsList = document.getElementById('cohortsList');
+
+  // --- date helpers: use the tutor's local date so "today" / "this month"
+  //     match what they see on the wall clock, and stay consistent between
+  //     the read and the write. ---
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const TODAY = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const MONTH = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;              // "2026-09", for labels + in-memory matching
+  // progress_reports.month and packs.month are DATE columns, so we bucket each
+  // month on its first day and read with a half-open [start, end) range — that
+  // also catches any existing rows saved on a different day of the month.
+  const MONTH_START = `${MONTH}-01`;                                            // "2026-09-01", the value we write
+  const MONTH_END = `${now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear()}-${pad(now.getMonth() === 11 ? 1 : now.getMonth() + 2)}-01`;
+  const sameMonth = v => String(v || '').slice(0, 7) === MONTH;
+  const MONTH_LABEL = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const TODAY_LABEL = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  function el(tag, props = {}, ...kids) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k.includes('-')) node.setAttribute(k, v); // aria-*, data-*
+      else node[k] = v;
+    }
+    for (const c of kids) node.append(c);
+    return node;
+  }
+
+  // ---------- sign-in ----------
+  document.getElementById('sendLinkBtn').addEventListener('click', async () => {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email) return;
+    statusEl.className = '';
+    statusEl.textContent = 'Sending…';
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + '/tutor/' }
+    });
+    if (error) {
+      statusEl.className = 'error';
+      statusEl.textContent = 'Something went wrong — please try again, or email hello@skylark.education.';
+    } else {
+      statusEl.textContent = 'Check your email for a sign-in link.';
+    }
+  });
+
+  signOutBtn.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  });
+
+  // ---------- boot ----------
+  let ME_EMAIL = null;
+
+  async function init() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      gate.classList.remove('hidden');
+      app.classList.add('hidden');
+      return;
+    }
+
+    const { data: isTutor, error: tutorErr } = await supabase.rpc('is_tutor');
+    if (tutorErr || !isTutor) {
+      gate.classList.remove('hidden');
+      app.classList.add('hidden');
+      statusEl.className = 'error';
+      statusEl.textContent = "That account doesn't have tutor access.";
+      return;
+    }
+
+    ME_EMAIL = session.user.email;
+    gate.classList.add('hidden');
+    signOutBtn.classList.remove('hidden');
+    loadingEl.classList.remove('hidden');
+    await loadBoard();
+    loadingEl.classList.add('hidden');
+    app.classList.remove('hidden');
+  }
+
+  let COHORTS = [], ENROLLMENTS = [], CHILDREN = [], ATTENDANCE = [], NOTES = [], PACKS = [];
+
+  async function loadBoard() {
+    // RLS scopes every one of these to the signed-in tutor's own cohorts /
+    // students, so we can select broadly and filter in memory.
+    const [cohortsRes, enrollRes, childrenRes, attRes, notesRes, packsRes, meRes] = await Promise.all([
+      supabase.from('cohorts').select('id,strand,year_range,day_of_week,ssession_time,tutor_name,classroom_link,capacity'),
+      supabase.from('enrollments').select('id,child_id,cohort_id,active').eq('active', true),
+      supabase.from('children').select('id,first_name,year_group'),
+      supabase.from('attendance').select('id,child_id,cohort_id,session_date,status').eq('session_date', TODAY),
+      supabase.from('progress_reports').select('id,child_id,month,report_text').gte('month', MONTH_START).lt('month', MONTH_END),
+      supabase.from('packs').select('id,cohort_id,month,pack_url').gte('month', MONTH_START).lt('month', MONTH_END),
+      supabase.from('tutors').select('name').eq('email', ME_EMAIL).maybeSingle(),
+    ]);
+
+    COHORTS = cohortsRes.data || [];
+    ENROLLMENTS = enrollRes.data || [];
+    CHILDREN = childrenRes.data || [];
+    ATTENDANCE = attRes.data || [];
+    NOTES = notesRes.data || [];
+    PACKS = packsRes.data || [];
+
+    const firstName = (meRes.data && meRes.data.name ? meRes.data.name : '').split(' ')[0];
+    if (firstName) document.getElementById('greeting').textContent = `Welcome back, ${firstName}`;
+    document.getElementById('greetingSub').textContent =
+      `Your groups for ${MONTH_LABEL}. Today is ${TODAY_LABEL} — take the register when you start.`;
+
+    render();
+  }
+
+  function childById(id) { return CHILDREN.find(c => c.id === id); }
+
+  function render() {
+    cohortsList.innerHTML = '';
+    if (!COHORTS.length) {
+      cohortsList.append(el('div', {
+        className: 'card empty',
+        textContent: "No groups are assigned to you yet. Once the team adds you to a cohort it'll show up here — any questions, email hello@skylark.education."
+      }));
+      return;
+    }
+    for (const cohort of COHORTS) cohortsList.append(renderCohort(cohort));
+  }
+
+  function renderCohort(cohort) {
+    const roster = ENROLLMENTS
+      .filter(e => e.cohort_id === cohort.id)
+      .map(e => childById(e.child_id))
+      .filter(Boolean)
+      .sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+    const card = el('div', { className: 'card cohort-card' });
+
+    const top = el('div', { className: 'cohort-top' });
+    const titleWrap = el('div');
+    titleWrap.append(el('div', { className: 'cohort-title', textContent: `${cohort.strand} · ${cohort.year_range || 'Any year'}` }));
+    titleWrap.append(el('div', { className: 'cohort-when', textContent: `${cohort.day_of_week} ${cohort.session_time} · up to ${cohort.capacity || 4} pupils` }));
+    top.append(titleWrap);
+
+    if (cohort.classroom_link) {
+      top.append(el('a', {
+        className: 'btn primary', href: cohort.classroom_link, target: '_blank', rel: 'noopener',
+        textContent: 'Open classroom'
+      }));
+    }
+    card.append(top);
+
+    const rosterWrap = el('div', { className: 'roster' });
+    if (!roster.length) {
+      rosterWrap.append(el('p', { className: 'empty', textContent: "No pupils are enrolled in this group yet." }));
+    } else {
+      for (const child of roster) rosterWrap.append(renderStudent(child, cohort));
+    }
+    card.append(rosterWrap);
+
+    card.append(renderPackBlock(cohort));
+    return card;
+  }
+
+  function renderStudent(child, cohort) {
+    const wrap = el('div', { className: 'student' });
+
+    // --- head: name + attendance ---
+    const head = el('div', { className: 'student-head' });
+    const nameWrap = el('div');
+    nameWrap.append(el('span', { className: 'name', textContent: child.first_name }));
+    nameWrap.append(el('span', { className: 'meta', textContent: `  Year ${child.year_group}` }));
+    head.append(nameWrap);
+
+    const group = el('div', { className: 'att-group', role: 'group', 'aria-label': `Attendance for ${child.first_name}` });
+    const feedback = el('div', { className: 'att-feedback', 'aria-live': 'polite' });
+    const STATUSES = [['present', 'Present'], ['late', 'Late'], ['absent', 'Absent']];
+    const current = () => ATTENDANCE.find(a => a.child_id === child.id && a.cohort_id === cohort.id);
+
+    const buttons = STATUSES.map(([value, label]) => {
+      const b = el('button', { className: 'att-btn', textContent: label, type: 'button' });
+      b.dataset.status = value;
+      b.addEventListener('click', () => markAttendance(child, cohort, value, buttons, feedback));
+      return b;
+    });
+    buttons.forEach(b => group.append(b));
+    paintAttendance(buttons, current() ? current().status : null);
+    head.append(group);
+    wrap.append(head);
+    wrap.append(feedback);
+
+    // --- progress note ---
+    const noteId = `note-${child.id}`;
+    wrap.append(el('label', { className: 'note-label', htmlFor: noteId, textContent: `This month's note · ${MONTH_LABEL}` }));
+    const existingNote = NOTES.find(n => n.child_id === child.id && sameMonth(n.month));
+    const textarea = el('textarea', {
+      id: noteId,
+      value: existingNote ? existingNote.report_text : '',
+      placeholder: 'What went well this session? What should we focus on next time?'
+    });
+    const saveRow = el('div', { className: 'save-row' });
+    const saveBtn = el('button', { className: 'primary small', textContent: 'Save note', type: 'button' });
+    const saveStatus = el('span', { className: 'save-status', 'aria-live': 'polite', textContent: existingNote ? 'Saved' : '' });
+    saveRow.append(saveBtn, saveStatus);
+
+    let savedValue = existingNote ? existingNote.report_text : '';
+    const markDirty = () => {
+      if (textarea.value !== savedValue) { saveStatus.className = 'save-status dirty'; saveStatus.textContent = 'Unsaved changes'; }
+      else { saveStatus.className = 'save-status'; saveStatus.textContent = savedValue ? 'Saved' : ''; }
+    };
+    textarea.addEventListener('input', markDirty);
+
+    const doSave = async () => {
+      const text = textarea.value.trim();
+      if (text === savedValue.trim()) return;
+      saveBtn.disabled = true;
+      saveStatus.className = 'save-status';
+      saveStatus.textContent = 'Saving…';
+      const err = await saveNote(child.id, text);
+      saveBtn.disabled = false;
+      if (err) {
+        saveStatus.className = 'save-status error';
+        saveStatus.textContent = "Couldn't save — try again in a moment.";
+        return;
+      }
+      savedValue = text;
+      saveStatus.className = 'save-status ok';
+      saveStatus.textContent = 'Saved just now';
+    };
+    saveBtn.addEventListener('click', doSave);
+    textarea.addEventListener('blur', doSave);
+    wrap.append(textarea, saveRow);
+
+    // --- flag for follow-up ---
+    const flagToggle = el('button', { className: 'flag-toggle', type: 'button', textContent: 'Flag a concern — loop in the team' });
+    const panel = el('div', { className: 'flag-panel hidden' });
+    panel.append(el('p', { textContent: 'A quick note for the team about ' + child.first_name + '. This stays with staff — parents never see it.' }));
+    const flagInput = el('textarea', { placeholder: "Anything you'd like a staff member to know or follow up on." });
+    const flagRow = el('div', { className: 'save-row' });
+    const flagSend = el('button', { className: 'primary small', type: 'button', textContent: 'Send to the team' });
+    const flagCancel = el('button', { className: 'small', type: 'button', textContent: 'Cancel' });
+    const flagStatus = el('span', { className: 'save-status', 'aria-live': 'polite' });
+    flagRow.append(flagSend, flagCancel, flagStatus);
+    panel.append(flagInput, flagRow);
+
+    flagToggle.addEventListener('click', () => {
+      panel.classList.toggle('hidden');
+      if (!panel.classList.contains('hidden')) flagInput.focus();
+    });
+    flagCancel.addEventListener('click', () => { flagInput.value = ''; panel.classList.add('hidden'); });
+    flagSend.addEventListener('click', async () => {
+      const note = flagInput.value.trim();
+      if (!note) { flagInput.focus(); return; }
+      flagSend.disabled = true;
+      flagStatus.className = 'save-status';
+      flagStatus.textContent = 'Sending…';
+      const { error } = await supabase.from('tutor_flags').insert({ child_id: child.id, tutor_email: ME_EMAIL, note });
+      flagSend.disabled = false;
+      if (error) {
+        flagStatus.className = 'save-status error';
+        flagStatus.textContent = "Couldn't send — try again in a moment.";
+        return;
+      }
+      flagInput.value = '';
+      panel.classList.add('hidden');
+      flagToggle.textContent = 'Passed to the team ✓ — flag another concern';
+      flagToggle.style.color = 'var(--moss)';
+    });
+    wrap.append(flagToggle, panel);
+
+    return wrap;
+  }
+
+  function paintAttendance(buttons, status) {
+    buttons.forEach(b => {
+      b.classList.remove('sel-present', 'sel-late', 'sel-absent');
+      if (b.dataset.status === status) b.classList.add('sel-' + status);
+    });
+  }
+
+  async function markAttendance(child, cohort, status, buttons, feedback) {
+    const prev = ATTENDANCE.find(a => a.child_id === child.id && a.cohort_id === cohort.id);
+    const prevStatus = prev ? prev.status : null;
+    if (prevStatus === status) return;
+
+    // optimistic
+    paintAttendance(buttons, status);
+    feedback.className = 'att-feedback';
+    feedback.textContent = 'Saving…';
+
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert(
+        { child_id: child.id, cohort_id: cohort.id, session_date: TODAY, status, noted_at: new Date().toISOString() },
+        { onConflict: 'child_id,cohort_id,session_date' }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      paintAttendance(buttons, prevStatus);
+      feedback.className = 'att-feedback error';
+      feedback.textContent = "Couldn't save — tap again.";
+      return;
+    }
+    if (prev) Object.assign(prev, data);
+    else ATTENDANCE.push(data);
+    feedback.className = 'att-feedback ok';
+    feedback.textContent = `Marked ${status}`;
+  }
+
+  async function saveNote(childId, text) {
+    const existing = NOTES.find(n => n.child_id === childId && sameMonth(n.month));
+    if (existing) {
+      const { error } = await supabase.from('progress_reports').update({ report_text: text }).eq('id', existing.id);
+      if (!error) existing.report_text = text;
+      return error;
+    }
+    const { data, error } = await supabase
+      .from('progress_reports')
+      .insert({ child_id: childId, month: MONTH_START, report_text: text })
+      .select()
+      .single();
+    if (!error && data) NOTES.push(data);
+    return error;
+  }
+
+  function renderPackBlock(cohort) {
+    const block = el('div', { className: 'pack-block' });
+    block.append(el('div', { className: 'pack-label', textContent: `This month's digital pack · ${MONTH_LABEL}` }));
+    const existing = PACKS.find(p => p.cohort_id === cohort.id && sameMonth(p.month));
+
+    const rowEl = el('div', { className: 'pack-row' });
+    const input = el('input', { type: 'url', placeholder: 'Paste the pack link (Google Drive, etc.)$', value: existing ? existing.pack_url : '' });
+    const btn = el('button', { className: 'primary small', type: 'button', textContent: 'Save' });
+    const stat = el('span', { className: 'save-status', 'aria-live': 'polite' });
+    rowEl.append(input, btn, stat);
+    block.append(rowEl);
+
+    const current = el('div', { className: 'pack-current' });
+    const paintCurrent = () => {
+      const p = PACKS.find(x => x.cohort_id === cohort.id && sameMonth(x.month));
+      current.innerHTML = '';
+      if (p && p.pack_url) {
+        current.append(document.createTextNode('Families currently see: '));
+        current.append(el('a', { href: p.pack_url, target: '_blank', rel: 'noopener', textContent: p.pack_url }));
+      } else {
+        current.append(el('span', { className: 'meta', textContent: 'No pack link shared for this month yet.' }));
+      }
+    };
+    paintCurrent();
+    block.append(current);
+
+    btn.addEventListener('click', async () => {
+      const url = input.value.trim();
+      if (!url) { input.focus(); return; }
+      btn.disabled = true;
+      stat.className = 'save-status';
+      stat.textContent = 'Saving…';
+      const err = await savePack(cohort.id, url);
+      btn.disabled = false;
+      if (err) {
+        stat.className = 'save-status error';
+        stat.textContent = "Couldn't save — try again in a moment.";
+        return;
+      }
+      stat.className = 'save-status ok';
+      stat.textContent = 'Saved — families can see it now';
+      paintCurrent();
+    });
+    return block;
+  }
+
+  async function savePack(cohortId, url) {
+    const existing = PACKS.find(p => p.cohort_id === cohortId && sameMonth(p.month));
+    if (existing) {
+      const { error } = await supabase.from('packs').update({ pack_url: url }).eq('id', existing.id);
+      if (!error) existing.pack_url = url;
+      return error;
+    }
+    const { data, error } = await supabase
+      .from('packs')
+      .insert({ cohort_id: cohortId, month: MONTH_START, pack_url: url })
+      .select()
+      .single();
+    if (!error && data) PACKS.push(data);
+    return error;
+  }
+
+  init();
+</script>
+</body>
+</html>
