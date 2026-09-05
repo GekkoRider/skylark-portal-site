@@ -96,6 +96,27 @@ Editor — no code required:
 - **`packs`**: add a new row each month with that cohort's PDF link (e.g. hosted on Google Drive with "anyone with the link can view" sharing).
 - **`progress_reports`**: add a new row each month per child with their report text.
 
+## Live classroom (Zoom Meeting SDK)
+
+The weekly session runs **inside** the portal now, not on an external link:
+
+- Tutors open a cohort's **Start session** (`tutor/session.html`) and join as
+  host; students open **Join … session** (`session.html`) and join as
+  participant. Both use the Zoom Meeting SDK for Web, component view (v6.2.0),
+  loaded from `source.zoom.us` — same "CDN script tag, no build" approach as the
+  rest of the repo.
+- Two Supabase Edge Functions do everything privileged (`supabase/functions/`):
+  `zoom-signature` mints a meeting-scoped SDK signature after checking the caller
+  is the assigned tutor or an enrolled child's parent; `zoom-webhook` receives
+  `recording.completed` and files the recording in a private Storage bucket.
+- Zoom SDK secret and Server-to-Server OAuth credentials live only in Edge
+  Function secrets — never in portal JS.
+- Schema changes are in [`db/zoom_migration.sql`](db/zoom_migration.sql).
+- **Full setup and test steps: [`ZOOM_SETUP.md`](ZOOM_SETUP.md).**
+- Manual one-tap attendance in `tutor/index.html` is unchanged and remains the
+  source of truth; Zoom join/leave times are captured separately as a
+  supplementary signal only.
+
 ## Notes
 
 - This is deliberately minimal — one classroom per child, one pack per

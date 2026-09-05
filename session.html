@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join your session — Skylark Learning Club</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 15c4 0 6-2 8.5-5C13 7 15 5 19 5c0 0-1 3-3.5 4.5C13.5 11 12 12 12 12s4 .5 6-1c0 0-.5 3.5-4 5-2.6 1.1-6 .8-8 1l-4-1Z' fill='none' stroke='%23336E8E' stroke-width='1.5' stroke-linejoin='round'/%3E%3Ccircle cx='17.5' cy='7' r='1' fill='%23336E8E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper:#FBF9F3; --ink:#232830; --ink-soft:#556072; --sky:#33668E; --sky-strong:#285376;
+    --hairline:#E4DECF; --surface:#FFFFFF; --surface-tint:#EDF2F5; --moss:#4C7A5A; --danger:#B23B3B;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --paper:#141A20; --ink:#E8ECF0; --ink-soft:#9DA9B7; --sky:#79ABD6; --sky-strong:#9BC3E6;
+      --hairline:#2C3742; --surface:#1B232C; --surface-tint:#202B35; --moss:#7FAE8B; --danger:#E08080; }
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; line-height:1.6;
+    display:flex; flex-direction:column;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:0.9rem 1.3rem; border-bottom:1px solid var(--hairline); flex:none;
+  }
+  .brand{ display:flex; align-items:center; gap:0.5rem; font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:1.05rem; }
+  .brand svg{ width:20px; height:20px; color:var(--sky); }
+  a.back{ color:var(--ink-soft); text-decoration:none; font-weight:600; font-size:0.85rem; }
+  a.back:hover{ color:var(--ink); }
+  main{ flex:1 1 auto; position:relative; min-height:0; }
+  #meetingSDKElement{ position:absolute; inset:0; display:none; }
+  .panel{ max-width:30rem; margin:3.5rem auto; padding:0 1.5rem; text-align:center; }
+  .panel h1{ font-family:"Fraunces",Georgia,serif; font-size:1.4rem; margin:0 0 0.5rem; }
+  .panel p{ color:var(--ink-soft); margin:0 0 1.3rem; }
+  .panel button{
+    font-family:inherit; font-size:0.98rem; font-weight:600; border-radius:9px; border:1px solid var(--sky);
+    background:var(--sky); color:#fff; padding:0.75rem 1.6rem; cursor:pointer;
+  }
+  .panel button:disabled{ opacity:0.6; cursor:default; }
+  .panel.error h1{ color:var(--danger); }
+  .panel .fine{ font-size:0.82rem; margin-top:1.4rem; }
+  .panel .fine a{ color:var(--sky); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 15c4 0 6-2 8.5-5C13 7 15 5 19 5c0 0-1 3-3.5 4.5C13.5 11 12 12 12 12s4 .5 6-1c0 0-.5 3.5-4 5-2.6 1.1-6 .8-8 1l-4-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="17.5" cy="7" r="1" fill="currentColor"/></svg>
+    Skylark Learning Club
+  </div>
+  <a class="back" href="/dashboard.html">← Back to dashboard</a>
+</header>
+
+<main>
+  <div id="meetingSDKElement"></div>
+  <div id="panel" class="panel">
+    <h1 id="panelTitle">Loading…</h1>
+    <p id="panelText">One moment.</p>
+    <button id="panelBtn" type="button" style="display:none"></button>
+    <p class="fine">Trouble joining? Email <a href="mailto:hello@skylark.education">hello@skylark.education</a>.</p>
+  </div>
+</main>
+
+<!-- Zoom Meeting SDK (component view) — vendor globals must load before the SDK bundle -->
+<script src="https://source.zoom.us/6.2.0/lib/vendor/react.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/react-dom.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/redux.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/redux-thunk.min.js"></script>
+<script src="https://source.zoom.us/6.2.0/lib/vendor/lodash.min.js"></script>
+<script src="https://source.zoom.us/zoom-meeting-embedded-6.2.0.min.js"></script>
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+  const SUPABASE_URL = 'https://clsbenbapgvgmubzbgxw.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsc2JlbmJhcGd2Z211YnpiZ3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNTcyNDIsImV4cCI6MjEwMzgzMzI0Mn0.ZcNy6eBKnu8S4Zgxincdm2PgUTezs4Z7NiddWm6JssM';
+  const ZOOM_SDK_VERSION = '6.2.0';
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const panel = document.getElementById('panel');
+  const panelTitle = document.getElementById('panelTitle');
+  const panelText = document.getElementById('panelText');
+  const panelBtn = document.getElementById('panelBtn');
+  const sdkEl = document.getElementById('meetingSDKElement');
+
+  const cohortId = new URLSearchParams(location.search).get('cohort');
+
+  function showPanel(title, text, { error = false, button = null } = {}) {
+    panel.style.display = 'block';
+    sdkEl.style.display = 'none';
+    panel.classList.toggle('error', error);
+    panelTitle.textContent = title;
+    panelText.textContent = text;
+    if (button) {
+      panelBtn.style.display = 'inline-block';
+      panelBtn.textContent = button.label;
+      panelBtn.disabled = false;
+      panelBtn.onclick = button.onClick;
+    } else {
+      panelBtn.style.display = 'none';
+    }
+  }
+
+  let client = null;
+
+  async function join() {
+    panelBtn.disabled = true;
+    panelBtn.textContent = 'Connecting…';
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { location.replace('/index.html'); return; }
+
+    let body;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/zoom-signature`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ cohort_id: cohortId, role: 'participant' }),
+      });
+      body = await res.json().catch(() => ({}));
+      if (res.status === 403) {
+        showPanel('We can’t place you in this session', "This session isn't linked to your child's account. If that looks wrong, email hello@skylark.education.", { error: true });
+        return;
+      }
+      if (body.status === 'room_not_open') {
+        showPanel('The room isn’t open yet', 'Your tutor hasn’t started the session. Keep this page open and press Join again in a few minutes.', {
+          button: { label: 'Join session', onClick: join },
+        });
+        return;
+      }
+      if (!res.ok || body.status !== 'ok') {
+        showPanel('Couldn’t join', 'Something went wrong. Please try again in a moment.', {
+          error: true, button: { label: 'Try again', onClick: join },
+        });
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      showPanel('Couldn’t join', 'Please check your connection and try again.', { error: true, button: { label: 'Try again', onClick: join } });
+      return;
+    }
+
+    showPanel('Joining…', 'Connecting you to the session. You may land in a waiting room until your tutor lets you in.');
+
+    if (typeof ZoomMtgEmbedded === 'undefined') {
+      showPanel('Couldn’t load Zoom', 'The Zoom library didn’t load — check your connection or any content blockers, then try again.', {
+        error: true, button: { label: 'Try again', onClick: () => location.reload() },
+      });
+      return;
+    }
+
+    client = ZoomMtgEmbedded.createClient();
+    try {
+      await client.init({
+        zoomAppRoot: sdkEl,
+        language: 'en-US',
+        patchJsMedia: true,
+        assetPath: `https://source.zoom.us/${ZOOM_SDK_VERSION}/lib/av`,
+      });
+      await client.join({
+        signature: body.signature,
+        meetingNumber: body.meetingNumber,
+        password: body.password,
+        userName: body.userName,
+      });
+    } catch (e) {
+      console.error('zoom join failed', e);
+      showPanel('Couldn’t join the session', 'Zoom refused the connection. Please try again, or email hello@skylark.education.', {
+        error: true, button: { label: 'Try again', onClick: () => location.reload() },
+      });
+      return;
+    }
+
+    panel.style.display = 'none';
+    sdkEl.style.display = 'block';
+
+    client.on('connection-change', (p) => {
+      if (p && (p.state === 'Closed' || p.state === 'Fail')) {
+        showPanel('Session ended', 'You’ve left the session.', {
+          button: { label: 'Rejoin', onClick: () => location.reload() },
+        });
+      }
+    });
+  }
+
+  async function boot() {
+    if (!cohortId) { showPanel('Missing session', 'This link is incomplete. Open the session from your dashboard.', { error: true }); return; }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { location.replace('/index.html'); return; }
+
+    // Friendly pre-join screen. RLS limits this read to the parent's own cohort.
+    const { data: enr } = await supabase
+      .from('enrollments')
+      .select('cohort_id, cohorts ( strand, day_of_week, session_time )')
+      .eq('cohort_id', cohortId)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle();
+
+    const strand = enr && enr.cohorts ? enr.cohorts.strand : null;
+    if (!strand) {
+      showPanel('We can’t place you in this session', "This session isn't linked to your child's account. If that looks wrong, email hello@skylark.education.", { error: true });
+      return;
+    }
+
+    showPanel(
+      `Join your ${strand} session`,
+      'When you’re ready, press Join. Please make sure your child is set up somewhere quiet with their camera and microphone allowed.',
+      { button: { label: 'Join session', onClick: join } },
+    );
+  }
+
+  boot();
+</script>
+</body>
+</html>

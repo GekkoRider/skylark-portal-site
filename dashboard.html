@@ -341,7 +341,7 @@
                       <div class="field"><div class="label">Tutor</div><div class="value">${escapeHtml(cohort.tutor_name)}</div></div>
                       <div class="field"><div class="label">Year group</div><div class="value">${escapeHtml(child.year_group)}</div></div>
                     </div>
-                    <a class="btn" href="${escapeHtml(cohort.classroom_link)}" target="_blank" rel="noopener">Join ${escapeHtml(cohort.strand)} session</a>
+                    <a class="btn" href="/session.html?cohort=${escapeHtml(e.cohort_id)}">Join ${escapeHtml(cohort.strand)} session</a>
                   `;
                 }).join("<div style=\"height:0.8rem\"></div>")
               : "<p class=\"empty\">Cohort details are on their way \u2014 we will email you within one working day.</p>";

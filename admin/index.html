@@ -206,17 +206,19 @@
   let FAMILIES = [];
   let ENROLLMENTS = [];
   let FLAGS = [];
+  let TUTORS = [];
 
   async function loadDashboard() {
-    const [familiesRes, childrenRes, cohortsRes, enrollmentsRes, flagsRes] = await Promise.all([
+    const [familiesRes, childrenRes, cohortsRes, enrollmentsRes, flagsRes, tutorsRes] = await Promise.all([
       supabase.from('families').select('id,parent_name,email').order('parent_name'),
       supabase.from('children').select('id,family_id,first_name,year_group'),
-      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,tutor_email,capacity').order('year_range'),
+      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,tutor_email,capacity,zoom_meeting_id').order('year_range'),
       supabase.from('enrollments').select('id,child_id,cohort_id,active').eq('active', true),
       supabase.from('tutor_flags')
         .select('id,note,created_at,child_id,tutor_email,resolved,children(first_name)')
         .eq('resolved', false)
         .order('created_at', { ascending: false }),
+      supabase.from('tutors').select('email,name,zoom_user_id'),
     ]);
 
     FAMILIES = familiesRes.data || [];
@@ -224,6 +226,7 @@
     COHORTS = cohortsRes.data || [];
     ENROLLMENTS = enrollmentsRes.data || [];
     FLAGS = flagsRes.data || [];
+    TUTORS = tutorsRes.data || [];
 
     renderNeedsCohort();
     renderFlags();
@@ -350,6 +353,16 @@
       const tutorEmailLabel = c.tutor_email
         ? escapeHtml(c.tutor_email)
         : '<span class="pill warn">no login email set</span>';
+      const tutorRow = c.tutor_email
+        ? TUTORS.find(t => (t.email || '').toLowerCase() === c.tutor_email.toLowerCase())
+        : null;
+      const zoomUserId = tutorRow && tutorRow.zoom_user_id ? tutorRow.zoom_user_id : '';
+      const zoomRoomPill = c.zoom_meeting_id
+        ? '<span class="pill ok">Zoom room ready</span>'
+        : '<span class="pill">Zoom room: on first start</span>';
+      const zoomUserPill = zoomUserId
+        ? `<span class="meta">Zoom user: <span style="color:var(--ink)">${escapeHtml(zoomUserId)}</span></span>`
+        : '<span class="pill warn">tutor has no Zoom user \u2014 set it below</span>';
       return `
         <div class="card" data-cohort="${c.id}">
           <div class="cohort-header">
@@ -360,6 +373,9 @@
             <span class="pill ${full ? 'warn' : 'ok'}">${roster.length} / ${capacity}</span>
           </div>
           <div class="roster">${rosterNames}</div>
+          <div class="row" style="margin-top:0.6rem; gap:0.5rem;">
+            ${zoomRoomPill} ${zoomUserPill}
+          </div>
           <div class="row" style="margin-top:0.6rem;">
             <span class="meta">Tutor: <span style="color:var(--ink)">${escapeHtml(c.tutor_name || 'TBC')}</span> \u00b7 ${tutorEmailLabel}</span>
             <button class="small editTutorBtn">Edit tutor</button>
@@ -370,6 +386,9 @@
             </label>
             <label>Tutor email (their login)
               <input name="tutor_email" type="email" value="${escapeHtml(c.tutor_email || '')}" placeholder="tutor@skylark.education">
+            </label>
+            <label>Zoom user (in Skylark's Zoom account)
+              <input name="zoom_user_id" value="${escapeHtml(zoomUserId)}" placeholder="tutor@skylark.education">
             </label>
             <button type="submit" class="primary small">Save</button>
             <button type="button" class="small cancelTutorBtn">Cancel</button>
@@ -393,12 +412,26 @@
         const fd = new FormData(form);
         const submitBtn = form.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
+        const tutorEmail = (fd.get('tutor_email') || '').trim() || null;
+        const zoomUserId = (fd.get('zoom_user_id') || '').trim() || null;
         const { error } = await supabase.from('cohorts').update({
           tutor_name: (fd.get('tutor_name') || '').trim() || null,
-          tutor_email: (fd.get('tutor_email') || '').trim() || null,
+          tutor_email: tutorEmail,
         }).eq('id', cohortId);
+        // The Zoom user lives on the tutors table (one per tutor, keyed by email),
+        // so the recurring-meeting owner is consistent across all their cohorts.
+        let tutorErr = null;
+        if (tutorEmail) {
+          const tutorPayload = { email: tutorEmail, zoom_user_id: zoomUserId };
+          const tn = (fd.get('tutor_name') || '').trim();
+          if (tn) tutorPayload.name = tn;
+          const res = await supabase.from('tutors').upsert(tutorPayload, { onConflict: 'email' });
+          tutorErr = res.error;
+        } else if (zoomUserId) {
+          tutorErr = { message: 'Add the tutor login email before setting their Zoom user.' };
+        }
         submitBtn.disabled = false;
-        if (error) { alert('Could not update tutor: ' + error.message); return; }
+        if (error || tutorErr) { alert('Could not save: ' + ((error || tutorErr).message)); return; }
         await loadDashboard();
       });
     });

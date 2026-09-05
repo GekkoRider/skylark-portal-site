@@ -273,7 +273,7 @@
     // RLS scopes every one of these to the signed-in tutor's own cohorts /
     // students, so we can select broadly and filter in memory.
     const [cohortsRes, enrollRes, childrenRes, attRes, notesRes, packsRes, meRes] = await Promise.all([
-      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,classroom_link,capacity'),
+      supabase.from('cohorts').select('id,strand,year_range,day_of_week,session_time,tutor_name,classroom_link,capacity,zoom_meeting_id'),
       supabase.from('enrollments').select('id,child_id,cohort_id,active').eq('active', true),
       supabase.from('children').select('id,first_name,year_group'),
       supabase.from('attendance').select('id,child_id,cohort_id,session_date,status').eq('session_date', TODAY),
@@ -324,14 +324,28 @@
     const titleWrap = el('div');
     titleWrap.append(el('div', { className: 'cohort-title', textContent: `${cohort.strand} · ${cohort.year_range || 'Any year'}` }));
     titleWrap.append(el('div', { className: 'cohort-when', textContent: `${cohort.day_of_week} ${cohort.session_time} · up to ${cohort.capacity || 4} pupils` }));
+    const roomState = el('span', {
+      className: 'pill', style: 'margin-top:0.35rem;',
+      textContent: cohort.zoom_meeting_id ? 'Zoom room ready' : 'Zoom room opens when you start'
+    });
+    titleWrap.append(roomState);
     top.append(titleWrap);
 
+    // Start the live session inside the portal (tutor joins as host). The Zoom
+    // meeting is created on this first click and reused every week after.
+    const joinWrap = el('div', { style: 'display:flex; flex-direction:column; align-items:flex-end; gap:0.3rem;' });
+    joinWrap.append(el('a', {
+      className: 'btn primary', href: `session.html?cohort=${cohort.id}`,
+      textContent: 'Start session'
+    }));
     if (cohort.classroom_link) {
-      top.append(el('a', {
-        className: 'btn primary', href: cohort.classroom_link, target: '_blank', rel: 'noopener',
-        textContent: 'Open classroom'
+      joinWrap.append(el('a', {
+        className: 'meta', href: cohort.classroom_link, target: '_blank', rel: 'noopener',
+        style: 'font-size:0.78rem; color:var(--ink-soft);',
+        textContent: 'Open old external link'
       }));
     }
+    top.append(joinWrap);
     card.append(top);
 
     const rosterWrap = el('div', { className: 'roster' });
