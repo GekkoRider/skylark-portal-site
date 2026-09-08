@@ -9,7 +9,7 @@
 //   recording.completed           -> download each file with the S2S token,
 //                                    store it in the private 'session-recordings'
 //                                    bucket, and record a session_recordings row
-//                                    (with per-child consent status attached).
+//                                    (recording is universal for safeguarding, so no per-child consent gate).
 //   meeting.participant_joined
 //   meeting.participant_left      -> supplementary join/leave timestamps in
 //                                    session_zoom_participation. This is NOT
@@ -106,21 +106,6 @@ async function cohortForMeeting(meetingId: unknown) {
   return data;
 }
 
-async function consentMissingChildIds(cohortId: string): Promise<string[]> {
-  const { data: enr } = await admin
-    .from("enrollments").select("child_id").eq("cohort_id", cohortId).eq("active", true);
-  const childIds = [...new Set((enr ?? []).map((e) => e.child_id).filter(Boolean))];
-  if (childIds.length === 0) return [];
-
-  const { data: consents } = await admin
-    .from("child_consents_current")
-    .select("child_id, granted")
-    .eq("consent_type", "session_recording")
-    .in("child_id", childIds);
-
-  const granted = new Map((consents ?? []).map((c) => [c.child_id, !!c.granted]));
-  return childIds.filter((id) => granted.get(id) !== true);
-}
 
 async function handleRecordingCompleted(object: Record<string, unknown>, fullEvent: unknown) {
   const meetingId = object.id;
@@ -128,7 +113,7 @@ async function handleRecordingCompleted(object: Record<string, unknown>, fullEve
   const startTime = object.start_time as string | undefined;
   const sessionDate = londonDate(startTime);
   const cohort = await cohortForMeeting(meetingId);
-  const missing = cohort ? await consentMissingChildIds(cohort.id) : [];
+  const missing = [] // retired: recording is universal under legitimate interest, not consent;
 
   const files = (object.recording_files ?? []) as Array<Record<string, unknown>>;
   for (const f of files) {
