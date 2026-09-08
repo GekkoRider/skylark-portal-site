@@ -1,0 +1,36 @@
+name: Deploy Supabase Edge Functions
+
+# Deploys the functions in supabase/functions/ to the Skylark project whenever
+# they change on main. Without this, editing the source here does NOT change
+# what is actually running - the repo and the deployed code drift apart.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: clsbenbapgvgmubzbgxw
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Zoom calls this endpoint directly and cannot present a Supabase JWT,
+      # so JWT verification must stay off. The function verifies Zoom's own
+      # signature against ZOOM_WEBHOOK_SECRET_TOKEN instead.
+      - name: Deploy zoom-webhook
+        run: supabase functions deploy zoom-webhook --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      # Called from the portal by a signed-in parent, so JWT verification stays on.
+      - name: Deploy zoom-signature
+        run: supabase functions deploy zoom-signature --project-ref "$PROJECT_REF"
