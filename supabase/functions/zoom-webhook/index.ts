@@ -1,7 +1,8 @@
 // zoom-webhook
 // ----------------------------------------------------------------------------
 // Public endpoint. Zoom calls it. Every request (except the one-off CRC
-// handshake) is verified against ZOOM_WEBHOOK_SECRET_TOKEN before the payload
+// handshake) is verified against Z
+OOM_WEBHOOK_SECRET_TOKEN before the payload
 // is trusted.
 //
 // Handles:
